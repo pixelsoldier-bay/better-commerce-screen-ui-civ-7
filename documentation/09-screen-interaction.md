@@ -10,6 +10,7 @@ DOM facts recorded there.
 | File | Purpose |
 |---|---|
 | `resources-tab.js` | the component wrapper; right-click unassign; **the hub** |
+| `controller-support.js` | routes controller/keyboard `accept` only to a focused mod control while Commerce is open |
 | `settlement-controls.js` | per-card priority picker, quick assign, unassign |
 | `assign-all-buttons.js` | Assign All / Reassign All / Unassign All / "?" |
 | `tab-icons.js` | icons instead of words on the tab strip |

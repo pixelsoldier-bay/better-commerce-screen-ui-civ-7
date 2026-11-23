@@ -63,13 +63,16 @@ What it does, and why each part matters:
 
 | Step | Reason |
 |---|---|
-| sets `role="button"`, `tabindex="0"`, `data-activatable="true"` | accessibility and consistency with the screen's own controls |
+| sets `role="button"`, `tabindex="0"`, `data-activatable="true"` | keyboard access and controller navigation through the game's focus system |
 | `click` → `activate`, with `stopPropagation` | ⚠️ otherwise the settlement card underneath treats the click as "assign the selected resource here" |
 | 150 ms repeat guard | a click can arrive twice (mouse and touch); the second is not a second press |
 | `mousedown` → `stopPropagation` **and `preventDefault`** | ⚠️ keeps the press from moving DOM focus. The screen's focus system lights up the surroundings of whatever holds focus — which is why clicking the priority picker used to wash the filters, the settlement card and the picker itself in yellow |
 | `mouseup` → `stopPropagation` | same reason as `click` |
 | `keydown` Enter / Space → `activate` | keyboard parity |
-| `element.blur()` after activating | belt and braces for the focus highlight |
+
+The helper also marks each element for `screen/controller-support.js`. While Commerce is mounted,
+that module routes the engine's `accept` action to the focused marked element. It does not handle
+navigation directions, change focus, or consume `accept` while a vanilla control is focused.
 
 This is the same approach Resource+ uses for its own buttons.
 

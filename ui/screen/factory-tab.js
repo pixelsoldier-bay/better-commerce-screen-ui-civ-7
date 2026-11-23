@@ -29,6 +29,7 @@ import { releaseTabIcons, startTabIcons } from './tab-icons.js';
 import { TreasureConvoysContainer, withoutHomelandIdlers } from './treasure-tab.js';
 import { COMMERCE_PANEL_CONTEXT } from './close-screen.js';
 import { COMMERCE_SCREEN_SELECTOR } from './screen-parts.js';
+import { startControllerSupport, stopControllerSupport } from './controller-support.js';
 import { isExplorationAge, isFactoryAge } from '../engine/age.js';
 
 const CommerceScreenWithFactoryTab = (_props) => {
@@ -54,6 +55,7 @@ const CommerceScreenWithFactoryTab = (_props) => {
 
     onMount(() => {
         audioTrigger('popup-open');
+        startControllerSupport();
         /*
          * ⚠️ FROM THE SCREEN, NOT FROM A TAB BODY. This used to run only from the Resources tab's
          * own onMount, so a screen opened straight onto another tab drew the strip as WORDS and
@@ -67,7 +69,10 @@ const CommerceScreenWithFactoryTab = (_props) => {
     });
     // ⚠️ A frame later: Solid's `render` empties the screen's root only after the cleanups have
     // run, and `releaseTabIcons` lets go of nothing still in the document.
-    onCleanup(() => requestAnimationFrame(() => releaseTabIcons()));
+    onCleanup(() => {
+        stopControllerSupport();
+        requestAnimationFrame(() => releaseTabIcons());
+    });
     const handleOnClosing = () => audioTrigger('popup-close');
     const title = createMemo(() => Locale.compose('LOC_COMMERCE_SCREEN_TITLE', civName()));
 

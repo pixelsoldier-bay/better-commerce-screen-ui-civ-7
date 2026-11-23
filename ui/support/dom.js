@@ -1,9 +1,10 @@
 /**
- * Making an injected element clickable.
+ * Making an injected element clickable by mouse, keyboard and the screen's controller bridge.
  *
  * ⚠️ The screen's own `Activatable` reacts to the engine's `mousebutton-left` action, which a
  * plain injected div never receives. Native DOM events do arrive, so this mod wires those - and
- * stops them, or the settlement card underneath treats the click as "assign here".
+ * stops them, or the settlement card underneath treats the click as "assign here". The marker
+ * lets controller-support.js route `accept` only when this element owns UI focus.
  */
 import { areModTooltipsHidden } from '../engine/tooltip-setting.js';
 
@@ -17,6 +18,7 @@ export function bindActivatable(element, activate) {
         element.setAttribute('tabindex', '0');
     }
     element.setAttribute('data-activatable', 'true');
+    element.setAttribute('data-najane-controller-activatable', 'true');
 
     let lastActivation = 0;
     const run = (event) => {
@@ -29,11 +31,10 @@ export function bindActivatable(element, activate) {
         }
         lastActivation = now;
         activate(event);
-        // Let focus go again if anything did put it here.
-        element.blur?.();
     };
 
     element.addEventListener('click', run);
+    element.addEventListener('najane-controller-activate', run);
     element.addEventListener('mousedown', (event) => {
         event.stopPropagation();
         // ⚠️ Keep the press from moving DOM focus here. The screen lights up the surroundings of
