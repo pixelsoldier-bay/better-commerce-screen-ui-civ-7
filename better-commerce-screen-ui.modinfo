@@ -33,7 +33,7 @@
                      rather than half-applying if a player enables both. The component
                      priority is computed at runtime as well, so this is belt and
                      braces. -->
-                <LoadOrder>1200</LoadOrder>
+                <LoadOrder>1200</LoadOrder> 
             </Properties>
             <Actions>
                 <UpdateText>
