@@ -9,6 +9,7 @@ import './screen/resources-tab.js';
 import './screen/factory-tab.js';
 // Wraps the trade route card - its own tab and its own mount.
 import './screen/trade-routes.js';
+import { startControllerSupport } from './screen/controller-support.js';
 
 // All eight run with the screen CLOSED, so they start here rather than from a component.
 import { startMerchantOrders } from './engine/merchant-orders.js';
@@ -30,6 +31,9 @@ import { forgetGameData } from './support/game-data.js';
 import { BUILD_STAMP } from './support/build-stamp.js';
 import { DIAGNOSTICS, log, warn } from './support/diagnostics.js';
 import { startMemoryProbe } from './support/memory-probe.js';
+
+// The controller bridge also covers this mod's HUD buttons while the Commerce screen is closed.
+startControllerSupport();
 
 startAutoAssign();
 // The other end of the same dropdown: putting back what the GAME slots by itself.

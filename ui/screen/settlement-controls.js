@@ -6,6 +6,8 @@
  * and every redraw discards whatever this mod added.
  */
 import { deselectQuietly, getCommerceModel } from '../model/screen-model.js';
+import { FocusManager } from '/core/ui-next/services/focus-manager.js';
+import { Focus } from '/core/ui/input/focus-support.js';
 import { PRIORITY_OPTIONS, getPriority, priorityLabel, setPriority } from '../planner/priorities.js';
 import { quickAssignSettlement } from '../planner/run.js';
 import { unassignSettlement } from '../engine/unassign.js';
@@ -491,7 +493,9 @@ function createControl(settlement) {
      */
     let menu = null;
     function buildMenu() {
-        const built = makeElement('div', `${CONTROL_CLASS}__menu`);
+        const built = makeElement('div', `${CONTROL_CLASS}__menu`, {
+            'data-najane-controller-menu': 'true',
+        });
         for (const option of PRIORITY_OPTIONS) {
             const label = priorityLabel(option.type);
             const item = makeElement('div', `${CONTROL_CLASS}__option`, {
@@ -502,20 +506,27 @@ function createControl(settlement) {
             const icon = makeElement('div', `${CONTROL_CLASS}__icon-host`);
             renderPriorityIcon(icon, option.type);
             item.appendChild(icon);
-            bindActivatable(item, () => {
+            bindActivatable(item, (event) => {
                 setPriority(settlement.cityID, option.type);
                 log(() => `priority for ${unassignLabel(settlement)}: ${label}`);
                 renderPriorityIcon(triggerIcon, option.type);
                 trigger.setAttribute('title', currentLabel(option.type));
                 trigger.setAttribute('aria-label', currentLabel(option.type));
                 closeThis();
+                if (event?.type === 'najane-controller-activate') {
+                    try {
+                        FocusManager.get().setFocus(trigger);
+                    } catch (error) {
+                        warn(`could not return focus to the settlement priority button: ${error}`);
+                    }
+                }
             });
             built.appendChild(item);
         }
         return built;
     }
 
-    bindActivatable(trigger, () => {
+    bindActivatable(trigger, (event) => {
         const willOpen = !control.classList.contains(OPEN_CLASS);
         closeMenus(control);
         if (!willOpen) {
@@ -528,6 +539,27 @@ function createControl(settlement) {
         }
         control.classList.add(OPEN_CLASS);
         openControl = control;
+
+        if (event?.type === 'najane-controller-activate') {
+            const firstOption = menu.querySelector('[data-najane-controller-activatable][tabindex]');
+            const card = control.closest('[data-name$="-city-resource-activatable"]');
+            if (firstOption && card) {
+                try {
+                    Focus.setContextAwareFocus(firstOption, card);
+                } catch (error) {
+                    warn(`could not focus the settlement priority options: ${error}`);
+                }
+            }
+        }
+    });
+
+    control.addEventListener('najane-controller-cancel', () => {
+        closeThis();
+        try {
+            FocusManager.get().setFocus(trigger);
+        } catch (error) {
+            warn(`could not return focus to the settlement priority button: ${error}`);
+        }
     });
 
     const unassign = makeElement('div', `${CONTROL_CLASS}__unassign`, {

@@ -10,7 +10,7 @@ DOM facts recorded there.
 | File | Purpose |
 |---|---|
 | `resources-tab.js` | the component wrapper; right-click unassign; **the hub** |
-| `controller-support.js` | adds a controller focus entry/exit for trade-card controls while preserving the card's resource navigation |
+| `controller-support.js` | routes controller input to mod buttons throughout the UI and adds entry/exit for controls inside trade and settlement cards |
 | `settlement-controls.js` | per-card priority picker, quick assign, unassign |
 | `assign-all-buttons.js` | Assign All / Reassign All / Unassign All / "?" |
 | `tab-icons.js` | icons instead of words on the tab strip |

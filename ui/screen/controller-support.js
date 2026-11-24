@@ -1,10 +1,9 @@
 /**
- * Routes Civ VII's controller/keyboard accept action to a focused control added by this mod.
- * It lives in screen because it only runs while Commerce is open and uses the UI focus service.
- * ⚠️ The handler consumes `accept` only when focus is on one of our marked controls.
- * A reference count keeps an older screen's delayed cleanup from stopping a reopened screen.
+ * Routes Civ VII's controller accept action to mod controls across the Commerce screen and HUD.
+ * Only explicit nested scopes enter a mod control group; vanilla navigation rules are not changed.
  */
 import { FocusManager } from '/core/ui-next/services/focus-manager.js';
+import { Focus } from '/core/ui/input/focus-support.js';
 import { InputEngineEventName } from '/core/ui/input/input-support.js';
 import { Navigation } from '/core/ui/input/navigation-support.js';
 
@@ -12,8 +11,11 @@ import { BUY_STACK_CLASS } from './trade-buy-merchant.js';
 import { TRADE_CARD_SELECTOR } from './screen-parts.js';
 import { warn } from '../support/diagnostics.js';
 
-let screenCount = 0;
-let activeRouteCard = null;
+const SETTLEMENT_CARD_SELECTOR = '[data-name$="-city-resource-activatable"]';
+const SETTLEMENT_ACTIONS_SELECTOR = '.najane-card-actions';
+
+let started = false;
+let activeScope = null;
 
 function swallow(event) {
     event.preventDefault();
@@ -21,15 +23,23 @@ function swallow(event) {
     event.stopImmediatePropagation();
 }
 
-function firstBuyControl(card) {
-    const stack = card.querySelector(`.${BUY_STACK_CLASS}`);
-    if (!stack) {
-        return null;
-    }
-    for (const control of stack.querySelectorAll('[data-najane-controller-activatable][tabindex]')) {
+function firstControlIn(container) {
+    for (const control of container.querySelectorAll('[data-najane-controller-activatable][tabindex]')) {
         if (Navigation.isFocusable(control)) {
             return control;
         }
+    }
+    return null;
+}
+
+function controllerScopeFor(focused) {
+    if (focused.matches(TRADE_CARD_SELECTOR)) {
+        const stack = focused.querySelector(`.${BUY_STACK_CLASS}`);
+        return stack ? { container: focused, controls: stack } : null;
+    }
+    if (focused.matches(SETTLEMENT_CARD_SELECTOR)) {
+        const actions = focused.querySelector(SETTLEMENT_ACTIONS_SELECTOR);
+        return actions ? { container: focused, controls: actions } : null;
     }
     return null;
 }
@@ -63,60 +73,63 @@ function onEngineInput(event) {
             return;
         }
 
-        // Cards are focus boundaries in Civ VII's Navigation tree. Enter only this card's
-        // mod action stack; ordinary cards and all other focus targets keep native behavior.
-        if (focused.matches(TRADE_CARD_SELECTOR)) {
-            let firstControl;
-            try {
-                firstControl = firstBuyControl(focused);
-            } catch (error) {
-                warn(`could not find a focusable trade-card control: ${error}`);
-                return;
-            }
-            if (!firstControl) {
-                return;
-            }
-            try {
-                FocusManager.get().setFocus(firstControl);
-                activeRouteCard = focused;
-                swallow(event);
-            } catch (error) {
-                warn(`could not enter the trade card's mod controls: ${error}`);
-            }
+        // Native focus boundaries hide descendants from sibling navigation. These two scopes
+        // get a local entry point so their controls precede the existing resource navigation.
+        const scope = controllerScopeFor(focused);
+        if (!scope) {
+            return;
+        }
+        let firstControl;
+        try {
+            firstControl = firstControlIn(scope.controls);
+        } catch (error) {
+            warn(`could not find a focusable control in a Commerce card: ${error}`);
+            return;
+        }
+        if (!firstControl) {
+            return;
+        }
+        try {
+            activeScope = scope.container;
+            Focus.setContextAwareFocus(firstControl, scope.container);
+            swallow(event);
+        } catch (error) {
+            activeScope = null;
+            warn(`could not enter a Commerce card's mod controls: ${error}`);
         }
         return;
     }
 
-    if (!isCancelInput(event) || !activeRouteCard?.isConnected
-        || focused === activeRouteCard || !activeRouteCard.contains(focused)) {
+    if (!isCancelInput(event)) {
+        return;
+    }
+
+    // A controller-opened picker is one level inside the card group: B closes it first.
+    const openMenu = focused.closest('[data-najane-controller-menu="true"]');
+    if (openMenu) {
+        swallow(event);
+        openMenu.dispatchEvent(new CustomEvent('najane-controller-cancel', { bubbles: true }));
+        return;
+    }
+
+    if (!activeScope?.isConnected || focused === activeScope || !activeScope.contains(focused)) {
+        activeScope = null;
         return;
     }
 
     try {
-        FocusManager.get().setFocus(activeRouteCard);
-        activeRouteCard = null;
+        FocusManager.get().setFocus(activeScope);
+        activeScope = null;
         swallow(event);
     } catch (error) {
-        warn(`could not return focus to the trade card: ${error}`);
+        warn(`could not return focus to the Commerce card: ${error}`);
     }
 }
 
 export function startControllerSupport() {
-    screenCount++;
-    if (screenCount > 1) {
+    if (started) {
         return;
     }
+    started = true;
     window.addEventListener(InputEngineEventName, onEngineInput, true);
-}
-
-export function stopControllerSupport() {
-    if (screenCount === 0) {
-        return;
-    }
-    screenCount--;
-    if (screenCount > 0) {
-        return;
-    }
-    activeRouteCard = null;
-    window.removeEventListener(InputEngineEventName, onEngineInput, true);
 }
