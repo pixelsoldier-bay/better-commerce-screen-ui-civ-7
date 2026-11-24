@@ -71,8 +71,9 @@ What it does, and why each part matters:
 | `keydown` Enter / Space → `activate` | keyboard parity |
 
 The helper also marks each element for `screen/controller-support.js`. While Commerce is mounted,
-that module routes the engine's `accept` action to the focused marked element. It does not handle
-navigation directions, change focus, or consume `accept` while a vanilla control is focused.
+that module routes the engine's `accept` action to the focused marked element. On a focused trade
+card, `accept` enters the first enabled mod control; cancel returns focus to that card. It does not
+change global navigation rules or consume these actions outside a mod control group.
 
 This is the same approach Resource+ uses for its own buttons.
 

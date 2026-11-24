@@ -6,14 +6,45 @@
  */
 import { FocusManager } from '/core/ui-next/services/focus-manager.js';
 import { InputEngineEventName } from '/core/ui/input/input-support.js';
+import { Navigation } from '/core/ui/input/navigation-support.js';
+
+import { BUY_STACK_CLASS } from './trade-buy-merchant.js';
+import { TRADE_CARD_SELECTOR } from './screen-parts.js';
+import { warn } from '../support/diagnostics.js';
 
 let screenCount = 0;
+let activeRouteCard = null;
+
+function swallow(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+}
+
+function firstBuyControl(card) {
+    const stack = card.querySelector(`.${BUY_STACK_CLASS}`);
+    if (!stack) {
+        return null;
+    }
+    for (const control of stack.querySelectorAll('[data-najane-controller-activatable][tabindex]')) {
+        if (Navigation.isFocusable(control)) {
+            return control;
+        }
+    }
+    return null;
+}
+
+function isCancelInput(event) {
+    try {
+        return event.isCancelInput?.() === true
+            || event.detail?.isCancelInput?.() === true
+            || event.detail?.name === 'cancel';
+    } catch (_error) {
+        return event.detail?.name === 'cancel';
+    }
+}
 
 function onEngineInput(event) {
-    if (event.detail?.name !== 'accept') {
-        return;
-    }
-
     let focused;
     try {
         focused = FocusManager.get().currentFocus();
@@ -21,16 +52,53 @@ function onEngineInput(event) {
         return;
     }
 
-    if (!(focused instanceof HTMLElement)
-        || focused.getAttribute('data-najane-controller-activatable') !== 'true'
-        || !focused.isConnected) {
+    if (!(focused instanceof HTMLElement) || !focused.isConnected) {
         return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    focused.dispatchEvent(new CustomEvent('najane-controller-activate'));
+    if (event.detail?.name === 'accept') {
+        if (focused.getAttribute('data-najane-controller-activatable') === 'true') {
+            swallow(event);
+            focused.dispatchEvent(new CustomEvent('najane-controller-activate'));
+            return;
+        }
+
+        // Cards are focus boundaries in Civ VII's Navigation tree. Enter only this card's
+        // mod action stack; ordinary cards and all other focus targets keep native behavior.
+        if (focused.matches(TRADE_CARD_SELECTOR)) {
+            let firstControl;
+            try {
+                firstControl = firstBuyControl(focused);
+            } catch (error) {
+                warn(`could not find a focusable trade-card control: ${error}`);
+                return;
+            }
+            if (!firstControl) {
+                return;
+            }
+            try {
+                FocusManager.get().setFocus(firstControl);
+                activeRouteCard = focused;
+                swallow(event);
+            } catch (error) {
+                warn(`could not enter the trade card's mod controls: ${error}`);
+            }
+        }
+        return;
+    }
+
+    if (!isCancelInput(event) || !activeRouteCard?.isConnected
+        || focused === activeRouteCard || !activeRouteCard.contains(focused)) {
+        return;
+    }
+
+    try {
+        FocusManager.get().setFocus(activeRouteCard);
+        activeRouteCard = null;
+        swallow(event);
+    } catch (error) {
+        warn(`could not return focus to the trade card: ${error}`);
+    }
 }
 
 export function startControllerSupport() {
@@ -49,5 +117,6 @@ export function stopControllerSupport() {
     if (screenCount > 0) {
         return;
     }
+    activeRouteCard = null;
     window.removeEventListener(InputEngineEventName, onEngineInput, true);
 }
