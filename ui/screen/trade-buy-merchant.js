@@ -246,6 +246,11 @@ ${ICON_BUTTON_STYLE}
     align-self: center;
     margin-left: 0.5rem;
 }
+.${STACK_CLASS} [data-najane-controller-activatable]:focus {
+    outline: 0.12rem solid #e5d2ac;
+    outline-offset: 0.08rem;
+    z-index: 1;
+}
 /*
  * The price and the plus, side by side. The plus is an ALTERNATIVE to paying, not a second
  * step after it, so it belongs on the same line rather than under it.

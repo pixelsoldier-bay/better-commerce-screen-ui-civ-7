@@ -56,6 +56,7 @@ import { onEngineEvent, stopEngineEvents } from '../engine/events.js';
 import { watchCommerceScreen } from './screen-observer.js';
 import { gameIcon } from './icons.js';
 import { TRADE_CARD_SELECTOR as CARD_SELECTOR, TRADE_HEAD_CLASS as HEAD_CLASS } from './screen-parts.js';
+import { focusFirstTradeFilter } from './controller-support.js';
 import { appendAll, bindActivatable, ensureStyle, makeElement, setTooltip } from '../support/dom.js';
 import { log, warn } from '../support/diagnostics.js';
 
@@ -102,6 +103,7 @@ const MEASURED_STYLE_ID = 'najane-trade-routes-measured';
 
 let measuredStyle = null;
 let measuredRowWidth = 0;
+let controllerFilterFocusPending = false;
 const STYLE_ID = 'najane-trade-routes-style';
 
 /** The two prose lines, matched by the classes the card's own templates carry. */
@@ -1366,6 +1368,10 @@ function decorateAll() {
         } catch (error) {
             warn(`filtering the trade routes failed: ${error}`);
         }
+        if (controllerFilterFocusPending) {
+            controllerFilterFocusPending = false;
+            requestAnimationFrame(() => focusFirstTradeFilter());
+        }
         try {
             refreshSummary();
         } catch (error) {
@@ -1389,6 +1395,7 @@ function startTradeRoutes() {
     remeasureAttempts = 0;
     measuredRowWidth = 0;
     summaryShown = false;
+    controllerFilterFocusPending = true;
     // Carries the rule that hides the instruction line; this tab can be the first one
     // opened, so it cannot wait for the Resources tab to put it there.
     ensureScreenLayout();
@@ -1490,6 +1497,7 @@ function onCorePlaybackComplete() {
 function stopTradeRoutes() {
     unwatch?.();
     unwatch = null;
+    controllerFilterFocusPending = false;
     stopRelationshipFooter();
     stopOfferRecheck();
     // Nothing is drawing a route any more, so nothing needs telling that one changed.

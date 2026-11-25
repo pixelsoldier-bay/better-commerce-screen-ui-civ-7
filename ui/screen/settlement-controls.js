@@ -7,7 +7,6 @@
  */
 import { deselectQuietly, getCommerceModel } from '../model/screen-model.js';
 import { FocusManager } from '/core/ui-next/services/focus-manager.js';
-import { Focus } from '/core/ui/input/focus-support.js';
 import { PRIORITY_OPTIONS, getPriority, priorityLabel, setPriority } from '../planner/priorities.js';
 import { quickAssignSettlement } from '../planner/run.js';
 import { unassignSettlement } from '../engine/unassign.js';
@@ -516,6 +515,7 @@ function createControl(settlement) {
                 if (event?.type === 'najane-controller-activate') {
                     try {
                         FocusManager.get().setFocus(trigger);
+                        trigger.focus();
                     } catch (error) {
                         warn(`could not return focus to the settlement priority button: ${error}`);
                     }
@@ -542,10 +542,10 @@ function createControl(settlement) {
 
         if (event?.type === 'najane-controller-activate') {
             const firstOption = menu.querySelector('[data-najane-controller-activatable][tabindex]');
-            const card = control.closest('[data-name$="-city-resource-activatable"]');
-            if (firstOption && card) {
+            if (firstOption) {
                 try {
-                    Focus.setContextAwareFocus(firstOption, card);
+                    FocusManager.get().setFocus(firstOption);
+                    firstOption.focus();
                 } catch (error) {
                     warn(`could not focus the settlement priority options: ${error}`);
                 }
@@ -557,6 +557,7 @@ function createControl(settlement) {
         closeThis();
         try {
             FocusManager.get().setFocus(trigger);
+            trigger.focus();
         } catch (error) {
             warn(`could not return focus to the settlement priority button: ${error}`);
         }

@@ -3,7 +3,6 @@
  * Only explicit nested scopes enter a mod control group; vanilla navigation rules are not changed.
  */
 import { FocusManager } from '/core/ui-next/services/focus-manager.js';
-import { Focus } from '/core/ui/input/focus-support.js';
 import { InputEngineEventName } from '/core/ui/input/input-support.js';
 import { Navigation } from '/core/ui/input/navigation-support.js';
 
@@ -91,7 +90,8 @@ function onEngineInput(event) {
         }
         try {
             activeScope = scope.container;
-            Focus.setContextAwareFocus(firstControl, scope.container);
+            FocusManager.get().setFocus(firstControl);
+            firstControl.focus();
             swallow(event);
         } catch (error) {
             activeScope = null;
@@ -119,10 +119,40 @@ function onEngineInput(event) {
 
     try {
         FocusManager.get().setFocus(activeScope);
+        activeScope.focus();
         activeScope = null;
         swallow(event);
     } catch (error) {
         warn(`could not return focus to the Commerce card: ${error}`);
+    }
+}
+
+function onFocusIn(event) {
+    const focused = event.target;
+    if (!(focused instanceof HTMLElement)
+        || focused.getAttribute('data-najane-controller-activatable') !== 'true') {
+        return;
+    }
+    activeScope = focused.closest(TRADE_CARD_SELECTOR) ?? focused.closest(SETTLEMENT_CARD_SELECTOR);
+}
+
+export function focusFirstTradeFilter() {
+    try {
+        if (Input.getActiveDeviceType() !== InputDeviceType.Controller) {
+            return false;
+        }
+        const firstFilter = document.querySelector(
+            '.najane-trade-sort__item[data-najane-controller-activatable="true"][tabindex]',
+        );
+        if (!(firstFilter instanceof HTMLElement) || !Navigation.isFocusable(firstFilter)) {
+            return false;
+        }
+        FocusManager.get().setFocus(firstFilter);
+        firstFilter.focus();
+        return true;
+    } catch (error) {
+        warn(`could not focus the trade resource filters: ${error}`);
+        return false;
     }
 }
 
@@ -132,4 +162,5 @@ export function startControllerSupport() {
     }
     started = true;
     window.addEventListener(InputEngineEventName, onEngineInput, true);
+    window.addEventListener('focusin', onFocusIn, true);
 }
